@@ -10,10 +10,6 @@ A tutorial on using three technologies: Go, Docker and MySQL
 Basic instructions to create an application container and a database service container, and deploy them together using Docker.  The application is a Golang web server with a signup page and login page, which read and write persistent data to / from the database.  Docker container deployment is on a local Ubuntu host.  With modification, this application and its service could be enabled to run on a PaaS or IaaS.
 
 <!--
-
-![Lack of integration across legacy systems](http://plantuml.com/plantuml/svg/3Sp13S8m3030LM20ndysGEB12gvh4ak97JasgDlJr_tkBaez3qxljnOnrmF0yLUgHCiz5pkP1ciKiW6VR3vGCSo1B7tnXXJobJYtsL6L7GQkk3330rvSaSxd5LJ74DEtszvvb9cZ_m40)
-
-Application
 Title Simple App
 !define MYFONT Dejavu Sans
 skinparam titleFontName MYFONT
@@ -31,9 +27,9 @@ app-r->db : read and write \npersistent data
 state d as "Docker"
 state app as "Application" : Source: main.go\nDocker container\n  Image: hobbit\n  Name: frodo
 state db as "MySQL DB" : Docker container\n  Image: mysql\n  Name: mysqlshire
-![Application]
-(http://www.plantuml.com/plantuml/svg/VOt1QkCm48RlUeeXz-G1SbYIR2uBsq99Zu4mbgRs44cZZgG6K_hkbUr0eOMUp7p-_a-xN51B3TuyS_449mwfVVOfcNpbc50nG7CAmRi1EA2zzYerkh_YHS5pFvJELvh-YJhIdtolAZSxurvnD1zcwJd03AkZs2lfwivmPkrrpnOBIrp15avIrT8M0dBSz7AEomQinD8GwJa2_0lODsUGhkCoWKSCxNvHSNAFXpd-C9wU_iFnC9L_2OKnl_glpdpcWPMCMw__O1jtbRq3Z0xEqL7oCaBD7FjsMYKiTC6KDdcO1w4Dlab9vOqpIxouRj9mhOlNnaltfbneCaapvqAnWCE2PaVHrU0_0G00)
 -->
+
+![Application](http://www.plantuml.com/plantuml/png/VOt1QkCm48RlUeeXz-G1SbYIR2uBsq99Zu4mbgRs44cZZgG6K_hkbUr0eOMUp7p-_a-xN51B3TuyS_449mwfVVOfcNpbc50nG7CAmRi1EA2zzYerkh_YHS5pFvJELvh-YJhIdtolAZSxurvnD1zcwJd03AkZs2lfwivmPkrrpnOBIrp15avIrT8M0dBSz7AEomQinD8GwJa2_0lODsUGhkCoWKSCxNvHSNAFXpd-C9wU_iFnC9L_2OKnl_glpdpcWPMCMw__O1jtbRq3Z0xEqL7oCaBD7FjsMYKiTC6KDdcO1w4Dlab9vOqpIxouRj9mhOlNnaltfbneCaapvqAnWCE2PaVHrU0_0G00)
 
 ### Assumptions
 An Ubuntu host is available with the following attributes:
