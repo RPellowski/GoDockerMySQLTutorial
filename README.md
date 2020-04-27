@@ -3,11 +3,18 @@ A tutorial on using three technologies: Go, Docker and MySQL
 
 ---
 
-# Work In Progress
+
+<div style="color:darkred">
+
+# 🚧 Work In Progress
+
+</div>
 
 ---
 
-Basic instructions to create an application container and a database service container, and deploy them together using Docker.  The application is a Golang web server with a signup page and login page, which read and write persistent data to / from the database.  Docker container deployment is on a local Ubuntu host.  With modification, this application and its service could be enabled to run on a PaaS or IaaS.
+Basic instructions to create an application container and a database service container, and deploy them together using Docker.  The application is a Golang web server with a signup page and login page, which read and write persistent data to / from the database.  Docker container deployment is on a local Linux host.  With modification, this application and its service could be enabled to run on a PaaS or IaaS.
+
+Requires general familiarity with Linux but assumes no knowledge of Go, Docker or MySQL.
 
 <!--
 Title Simple App
@@ -32,68 +39,126 @@ state db as "MySQL DB" : Docker container\n  Image: mysql\n  Name: mysqlshire
 ![Application](http://www.plantuml.com/plantuml/png/VOt1QkCm48RlUeeXz-G1SbYIR2uBsq99Zu4mbgRs44cZZgG6K_hkbUr0eOMUp7p-_a-xN51B3TuyS_449mwfVVOfcNpbc50nG7CAmRi1EA2zzYerkh_YHS5pFvJELvh-YJhIdtolAZSxurvnD1zcwJd03AkZs2lfwivmPkrrpnOBIrp15avIrT8M0dBSz7AEomQinD8GwJa2_0lODsUGhkCoWKSCxNvHSNAFXpd-C9wU_iFnC9L_2OKnl_glpdpcWPMCMw__O1jtbRq3Z0xEqL7oCaBD7FjsMYKiTC6KDdcO1w4Dlab9vOqpIxouRj9mhOlNnaltfbneCaapvqAnWCE2PaVHrU0_0G00)
 
 ### Assumptions
-An Ubuntu host is available with the following attributes:
- * Ready to install Docker (64-bit Ubuntu 18 or 20)
+A Linux host is available with the following attributes:
+ * Ready to install Docker 
  * Provides a data directory to be used as a persistent backing store for the database
  * Operations are performed as root; if done as non-root user, commands may need `sudo` and other operations may fail unless privileges are accounted for
 
+### Tested with versions
+ * Ubuntu 20.04 LTS
+ * Golang
+ * Docker
+ * MySQL
+
 ### Caveats
-This tutorial may become stale as package location, distribution, management and UI commands change for Ubuntu, Docker and other components.
+This tutorial may become stale as package location, distribution, management and UI commands change for Ubuntu, Docker, Go and other components.
 
 ## Workflow
 ### Docker
 #### Install Docker
 There are a number of methods that can be used to install Docker.  One way is to install a `gitlab ci-runner`, which makes use of a single-line script for Docker installation.  Another method is to follow instructions from Docker.  Either way is relatively painless.  See the links below for downloads.
 
-#### Test the deployment of an Alpine container
-Run an interactive version of the Alpine container, a small distro of Linux, using the `-i` option (and invoking the `/bin/sh` command).  Show the filesystem and running processes.  Exit the container and return to Ubuntu.  No containers are running after this operation.  
+Before continuing, we can perform simple tests of Docker.
 
-**Note:** By not specifying a version, `alpine:latest` is pulled and cached into Docker.  Subsequent references to Alpine will be faster unless the latest version has changed in the public repository.
+Note on running as non-root:
 
+#### Deploy a Hello World container
+
+Since this is a new deployment, Docker will look for the `hello-world` container locally, proceed to download from DockerHub and then run it.
+
+```bash
+rob@Ubuntu20:~> docker run hello-world
+Unable to find image 'hello-world:latest' locally
+latest: Pulling from library/hello-world
+0e03bdcc26d7: Pull complete 
+Digest: sha256:8e3114318a995a1ee497790535e7b88365222a21771ae7e53687ad76563e8e76
+Status: Downloaded newer image for hello-world:latest
+
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+
+To generate this message, Docker took the following steps:
+ 1. The Docker client contacted the Docker daemon.
+ 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+    (amd64)
+ 3. The Docker daemon created a new container from that image which runs the
+    executable that produces the output you are currently reading.
+ 4. The Docker daemon streamed that output to the Docker client, which sent it
+    to your terminal.
+
+To try something more ambitious, you can run an Ubuntu container with:
+ $ docker run -it ubuntu bash
+
+Share images, automate workflows, and more with a free Docker ID:
+ https://hub.docker.com/
+
+For more examples and ideas, visit:
+ https://docs.docker.com/get-started/
 ```
-root@ubuntu1604:~# docker run -i -t alpine /bin/sh
+
+#### Deploy an Alpine container
+
+Run an interactive version of the Alpine container, a small distro of Linux, using the `-i` option and invoking the `/bin/sh` command.  Show the filesystem and running processes.  Exit the container and return to Ubuntu.  No containers are running after this operation.  
+
+**Note:** By not specifying a version, `alpine:latest` is pulled and cached into Docker.  Subsequent references to Alpine will be faster unless the latest version has changed in the public repository, in which case it will be downloaded before running.
+
+```bash
+rob@Ubuntu20:~> docker run -i -t alpine /bin/sh
 Unable to find image 'alpine:latest' locally
 latest: Pulling from library/alpine
-0a8490d0dfd3: Pull complete 
-Digest: sha256:dfbd4a3a8ebca874ebd2474f044a0b33600d4523d03b0df76e5c5986cb02d7e8
+cbdbe7a5bc2a: Pull complete 
+Digest: sha256:9a839e63dad54c3a6d1834e29692c8492d93f90c59c978c1ed79109ea4fb9a54
 Status: Downloaded newer image for alpine:latest
 / # ls
-bin    dev    etc    home   lib    media  mnt    proc   root   run    sbin   srv    sys    tmp    usr    var
+bin    dev    etc    home   lib    media  mnt    opt    proc   root   run    sbin   srv    sys    tmp    usr    var
 / # ps
-PID   USER     TIME   COMMAND
-    1 root       0:00 /bin/sh
-    7 root       0:00 ps
+PID   USER     TIME  COMMAND
+    1 root      0:00 /bin/sh
+    7 root      0:00 ps
 / # exit
-root@ubuntu1604:~# docker ps
+rob@Ubuntu20:~> docker ps
 CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
-<no containers>
 ```
+**Note:** The `docker ps` command shows no containers running.
 
 ### Test the deployment of a Golang container
-Run an interactive version of the Golang container.  Compile and run a simple Golang application.  Use the `-v` option to map an Ubuntu directory (`~/hello`) to a container directory (`/go/src`).  For this container, the shell is `/bin/bash`.  
+Run an interactive version of the Golang container.  Compile and run a simple Golang application.  Use the `-v` option to map a Linux directory (`~/hello`) to a container directory (`/go/src`).  For this container, the shell is `/bin/bash`.  
 
-**Note:** Since the container does not have an editor such as `vim` installed, create the file on the Ubuntu host and map the directory to the container.  Editing (using `vim` or another editor) on the Ubuntu host will be reflected inside the container.  The binary created during the container build is also on the Ubuntu host.
+**Note:** Since the container does not have an editor such as `vim` installed, create the file on the Linux host and map the directory to the container.  Editing (using `vim` or another editor) on the Linux host will be reflected inside the container. 
 
-```
-root@ubuntu1604:~# mkdir hello
-root@ubuntu1604:~# cd hello
-root@ubuntu1604:~/hello# 
-root@ubuntu1604:~/hello# cat >hello.go <<'EOF'
-package main
+After building in the container, run the executable. The binary created in the container is also on the Linux host because of the directory mapping.  Execute it on the Linux host.
 
-import "fmt"
-
-func main() {
-    fmt.Println("Hello, World!")
-}
-EOF
-root@ubuntu1604:~/hello# docker run -v /root/hello:/go/src -i -t golang /bin/bash
-root@a12a96685191:/go# cd src
-root@a12a96685191:/go/src# go build hello.go
-root@a12a96685191:/go/src# ./hello
+```bash
+rob@Ubuntu20:~/hello> cat >hello.go <<'EOF'
+> package main
+> 
+> import "fmt"
+> 
+> func main() {
+>     fmt.Println("Hello, World!")
+> }
+> EOF
+rob@Ubuntu20:~/hello> docker run -v ~/hello:/go/src -i -t golang /bin/bash
+Unable to find image 'golang:latest' locally
+latest: Pulling from library/golang
+90fe46dd8199: Downloading [====================>         ]  25.05MB/50.38MB
+35a4f1977689: Download complete 
+bbc37f14aded: Download complete 
+74e27dc593d4: Downloading [============================> ]  42.08MB/51.83MB
+38b1453721cb: Downloading [============>                 ]  17.67MB/68.61MB
+780391780e20: Waiting 
+0f7fd9f8d114: Waiting 
+...
+Digest: sha256:b451547e2056c6369bbbaf5a306da1327cc12c074f55c311f6afe3bfc1c286b6
+Status: Downloaded newer image for golang:latest
+root@286532541b79:/go# 
+root@721327c4bdda:/go# cd src
+root@721327c4bdda:/go/src# go build hello.go
+root@721327c4bdda:/go/src# ./hello
 Hello, World!
-root@a12a96685191:/go/src# exit
-root@ubuntu1604:~/hello# ./hello
+root@721327c4bdda:/go/src# exit
+exit
+rob@Ubuntu20:~/hello> ./hello
 Hello, World!
 ```
 
