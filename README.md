@@ -38,29 +38,38 @@ state db as "MySQL DB" : Docker container\n  Image: mysql\n  Name: mysqlshire
 
 ![Application](http://www.plantuml.com/plantuml/png/VOt1QkCm48RlUeeXz-G1SbYIR2uBsq99Zu4mbgRs44cZZgG6K_hkbUr0eOMUp7p-_a-xN51B3TuyS_449mwfVVOfcNpbc50nG7CAmRi1EA2zzYerkh_YHS5pFvJELvh-YJhIdtolAZSxurvnD1zcwJd03AkZs2lfwivmPkrrpnOBIrp15avIrT8M0dBSz7AEomQinD8GwJa2_0lODsUGhkCoWKSCxNvHSNAFXpd-C9wU_iFnC9L_2OKnl_glpdpcWPMCMw__O1jtbRq3Z0xEqL7oCaBD7FjsMYKiTC6KDdcO1w4Dlab9vOqpIxouRj9mhOlNnaltfbneCaapvqAnWCE2PaVHrU0_0G00)
 
-### Assumptions
+## Assumptions
 A Linux host is available with the following attributes:
  * Ready to install Docker 
  * Provides a data directory to be used as a persistent backing store for the database
- * Operations are performed as root; if done as non-root user, commands may need `sudo` and other operations may fail unless privileges are accounted for
+ * Operations are easier when performed as root; for non-root user, commands may need `sudo` and other operations may fail unless privileges are accounted for
 
-### Tested with versions
+## Tested with versions
  * Ubuntu 20.04 LTS
  * Golang
  * Docker
  * MySQL
 
-### Caveats
+## Caveats
 This tutorial may become stale as package location, distribution, management and UI commands change for Ubuntu, Docker, Go and other components.
 
-## Workflow
-### Docker
-#### Install Docker
+Additional security measures used in a web application are not shown.
+
+# Workflow
+## Docker
+### Install Docker
 There are a number of methods that can be used to install Docker.  One way is to install a `gitlab ci-runner`, which makes use of a single-line script for Docker installation.  Another method is to follow instructions from Docker.  Either way is relatively painless.  See the links below for downloads.
 
-Before continuing, we can perform simple tests of Docker.
+**Note:** When using Docker as non-root, add to the group permissions.
+```bash
+rob@Ubuntu20:~> groups rob
+rob : rob adm cdrom sudo dip plugdev lpadmin lxd sambashare
+rob@Ubuntu20:~> sudo usermod -aG docker rob
+rob@Ubuntu20:~> groups rob
+rob : rob adm cdrom sudo dip plugdev lpadmin lxd sambashare docker
+```
 
-Note on running as non-root:
+Once installed, perform simple tests of Docker.
 
 #### Deploy a Hello World container
 
@@ -96,11 +105,11 @@ For more examples and ideas, visit:
  https://docs.docker.com/get-started/
 ```
 
-#### Deploy an Alpine container
+### Deploy an Alpine container
 
 Run an interactive version of the Alpine container, a small distro of Linux, using the `-i` option and invoking the `/bin/sh` command.  Show the filesystem and running processes.  Exit the container and return to Ubuntu.  No containers are running after this operation.  
 
-**Note:** By not specifying a version, `alpine:latest` is pulled and cached into Docker.  Subsequent references to Alpine will be faster unless the latest version has changed in the public repository, in which case it will be downloaded before running.
+**Note:** By not specifying a version, `alpine:latest` is pulled and cached into Docker.  Subsequent references to Alpine will be faster unless the latest version has changed in the public repository, in which case the new version will be downloaded before running.
 
 ```bash
 rob@Ubuntu20:~> docker run -i -t alpine /bin/sh
@@ -122,13 +131,17 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 **Note:** The `docker ps` command shows no containers running.
 
 ### Test the deployment of a Golang container
-Run an interactive version of the Golang container.  Compile and run a simple Golang application.  Use the `-v` option to map a Linux directory (`~/hello`) to a container directory (`/go/src`).  For this container, the shell is `/bin/bash`.  
+Run an interactive version of the Golang container (`golang:latest`).  Compile and run a simple Golang application.  Use the `-v` option to map a Linux directory (`~/hello`) to a container directory (`/go/src`).  For this container, the shell is `/bin/bash`.  
 
 **Note:** Since the container does not have an editor such as `vim` installed, create the file on the Linux host and map the directory to the container.  Editing (using `vim` or another editor) on the Linux host will be reflected inside the container. 
 
-After building in the container, run the executable. The binary created in the container is also on the Linux host because of the directory mapping.  Execute it on the Linux host.
+After building in the container, run the executable. 
+
+The binary created in the container is also on the Linux host because of the directory mapping.  Execute it on the Linux host.
 
 ```bash
+rob@Ubuntu20:~/> mkdir hello
+rob@Ubuntu20:~/> cd hello
 rob@Ubuntu20:~/hello> cat >hello.go <<'EOF'
 > package main
 > 
@@ -164,9 +177,19 @@ Hello, World!
 
 ## MySQL
 ### Deploy MySQL instance
-MySQL is deployed with a script (`provision_db.sh`, below).  The script can be improved by replacing hard-coded items to make use of environment variables and improve security.  
+MySQL container (`mysql:latest`) is deployed with a script (`provision_db.sh`).  The script can be improved by replacing hard-coded items to make use of environment variables and improve security.  
 
-For this instance, port 13306 is selected to avoid collisions in the case that MySQL is already deployed on the Ubuntu host (at default port 3306).  The container still sees incoming interactions at port 3306.
+For this instance, port `13306` is selected to avoid collisions in the case that MySQL is already deployed on the Linux host (at default port `3306`).  Docker networking ensures that the container still sees incoming interactions at port `3306.`
+
+<div style="color:darkred">
+
+----
+
+# WIP HERE
+
+----
+
+</div>
 
 ```
 root@ubuntu1604:~# ./provision_db.sh 
@@ -191,6 +214,10 @@ CONTAINER ID        IMAGE               COMMAND                  CREATED        
 ```
 
 ### Test MySQL instance
+To test, there are two ways to attach to the newly created MySQL instance:
+ * Use the MySQL CLI instance on localhost (requires installation on Linux)
+ * Connect directly to the container and run the CLI inside
+
 Use the MySQL CLI to attach (as root) to the newly created MySQL instance on localhost and inspect some of the MySQL content.  If the default port 3306 is used, `-P` can be omitted.
 
 ```
