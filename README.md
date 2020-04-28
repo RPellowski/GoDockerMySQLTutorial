@@ -181,53 +181,56 @@ MySQL container (`mysql:latest`) is deployed with a script (`provision_db.sh`). 
 
 For this instance, port `13306` is selected to avoid collisions in the case that MySQL is already deployed on the Linux host (at default port `3306`).  Docker networking ensures that the container still sees incoming interactions at port `3306.`
 
-<div style="color:darkred">
-
-----
-
-# WIP HERE
-
-----
-
-</div>
-
 ```
-root@ubuntu1604:~# ./provision_db.sh 
+rob@Ubuntu20:~/> ./provision_db.sh
 Starting the MySQL container as 'mysqlshire'
 Unable to find image 'mysql:latest' locally
 latest: Pulling from library/mysql
-5040bd298390: Already exists 
-55370df68315: Pull complete 
+54fec2fa59d0: Downloading [================>      ]  24.25MB/27.1MB
+bcc6c6145912: Download complete 
+951c3d959c9d: Download complete 
+05de4d0e206e: Download complete 
+319f0394ef42: Download complete 
+d9185034607b: Downloading [===>                   ]  866.7kB/13.44MB
+013a9c64dadc: Download complete 
+42f3f7d10903: Waiting 
+c4a3851d9207: Waiting 
+82a1cc65c182: Waiting 
+a0a6b01efa55: Waiting 
+bca5ce71f9ea: Waiting 
 ...
-Digest: sha256:5e2ec5964847dd78c83410f228325a462a3bfd796b6133b2bdd590b71721fea6
+bca5ce71f9ea: Pull complete 
+Digest: sha256:61a2a33f4b8b4bc93b7b6b9e65e64044aaec594809f818aeffbff69a893d1944
 Status: Downloaded newer image for mysql:latest
-76cac61dc5d09a3aeb4d1849ad070a6c8acd4c035c76456fe16c6922a0bc4227
-Database 'CNDPdata' running.
-  Username: CNDPuser
-  Password: CNDPpass
+f49fdd43ddc2692372b01e5bd046561f975b3b07bb7cd69c1bbfd79159cb2316
+Database 'LOTRdata' running.
+  Username: LOTRuser
+  Password: LOTRpass
 port 13306
-persisting to local directory /root/mydb/mysql-datadir
-
-root@ubuntu1604:~# docker ps
-CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                     NAMES
-76cac61dc5d0        mysql               "docker-entrypoint..."   2 minutes ago       Up 2 minutes        0.0.0.0:13306->3306/tcp   mysqlshire
+persisting to local directory /home/rob/mydb/mysql-datadir
+rob@Ubuntu20:~/> docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                NAMES
+f49fdd43ddc2        mysql               "docker-entrypoint.s…"   2 minutes ago       Up 2 minutes        33060/tcp, 0.0.0.0:13306->3306/tcp   mysqlshire
 ```
 
 ### Test MySQL instance
 To test, there are two ways to attach to the newly created MySQL instance:
+ * Connect directly to the container and run the MySQL CLI inside (the method used here)
  * Use the MySQL CLI instance on localhost (requires installation on Linux)
- * Connect directly to the container and run the CLI inside
 
-Use the MySQL CLI to attach (as root) to the newly created MySQL instance on localhost and inspect some of the MySQL content.  If the default port 3306 is used, `-P` can be omitted.
+Use a Docker command to attach to the newly created MySQL instance in the container, run the MySQL CLI and inspect some of the MySQL content.
+
+First run as the privileged root user.
 
 ```
-root@ubuntu1604:~# mysql -uroot -pCNDProotpass -h0.0.0.0 -P13306
+rob@Ubuntu20:~/> docker exec -it mysqlshire /bin/bash
+root@ed4409634c82:/# mysql -uroot -pLOTRrootpass
 mysql: [Warning] Using a password on the command line interface can be insecure.
 Welcome to the MySQL monitor.  Commands end with ; or \g.
-Your MySQL connection id is 4
-Server version: 5.7.17 MySQL Community Server (GPL)
+Your MySQL connection id is 8
+Server version: 8.0.20 MySQL Community Server - GPL
 
-Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
 
 Oracle is a registered trademark of Oracle Corporation and/or its
 affiliates. Other names may be trademarks of their respective
@@ -239,65 +242,103 @@ mysql> show databases;
 +--------------------+
 | Database           |
 +--------------------+
+| LOTRdata           |
 | information_schema |
-| CNDPdata           |
 | mysql              |
 | performance_schema |
 | sys                |
 +--------------------+
 5 rows in set (0.00 sec)
 
-mysql> show fields from mysql.user;
-+------------------------+-----------------------------------+------+-----+-----------------------+-------+
-| Field                  | Type                              | Null | Key | Default               | Extra |
-+------------------------+-----------------------------------+------+-----+-----------------------+-------+
-| Host                   | char(60)                          | NO   | PRI |                       |       |
-| User                   | char(32)                          | NO   | PRI |                       |       |
+mysql> show tables from mysql;
++---------------------------+
+| Tables_in_mysql           |
++---------------------------+
+| columns_priv              |
+| component                 |
+| db                        |
 ...
+| time_zone_transition_type |
+| user                      |
++---------------------------+
+33 rows in set (0.00 sec)
+
+mysql> show fields from mysql.user;
++--------------------------+-----------------------------------+------+-----+-----------------------+-------+
+| Field                    | Type                              | Null | Key | Default               | Extra |
++--------------------------+-----------------------------------+------+-----+-----------------------+-------+
+| Host                     | char(255)                         | NO   | PRI |                       |       |
+| User                     | char(32)                          | NO   | PRI |                       |       |
+...
++--------------------------+-----------------------------------+------+-----+-----------------------+-------+
+51 rows in set (0.03 sec)
 
 mysql> select host, user, account_locked from mysql.user;
-+-----------+-----------+----------------+
-| host      | user      | account_locked |
-+-----------+-----------+----------------+
-| localhost | root      | N              |
-| localhost | mysql.sys | Y              |
-| %         | root      | N              |
-| %         | CNDPuser  | N              |
-+-----------+-----------+----------------+
-4 rows in set (0.00 sec)
++-----------+------------------+----------------+
+| host      | user             | account_locked |
++-----------+------------------+----------------+
+| %         | LOTRuser         | N              |
+| %         | root             | N              |
+| localhost | mysql.infoschema | Y              |
+| localhost | mysql.session    | Y              |
+| localhost | mysql.sys        | Y              |
+| localhost | root             | N              |
++-----------+------------------+----------------+
+6 rows in set (0.01 sec)
 
-mysql> show tables from CNDPdata;
-Empty set (0.00 sec)
-Configure MySQL for app
-Add table to CNDPdata database.  Perform some SQL operations on the database and the newly created table.
+mysql> show tables from LOTRdata;
+Empty set (0.01 sec)
+mysql> ^DBye
+root@ed4409634c82:/#
+```
 
-mysql> CREATE TABLE CNDPdata.users(
+### Configure MySQL for App
+Add table to LOTRata database.  Perform some SQL operations on the database and the newly created table.
+
+```
+root@ed4409634c82:/# mysql -uLOTRuser -pLOTRpass
+...
+
+mysql> CREATE TABLE LOTRdata.users(
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50),
     password VARCHAR(120)
 );
  
-mysql> show tables from CNDPdata;
+mysql> show tables from LOTRdata;
 +--------------------+
-| Tables_in_CNDPdata |
+| Tables_in_LOTRdata |
 +--------------------+
 | users              |
 +--------------------+
-1 row in set (0.00 sec)
+1 row in set (0.01 sec)
 
-mysql> show fields from CNDPdata.users;
+mysql> show fields from LOTRdata.users;
 +----------+--------------+------+-----+---------+----------------+
 | Field    | Type         | Null | Key | Default | Extra          |
 +----------+--------------+------+-----+---------+----------------+
-| id       | int(11)      | NO   | PRI | NULL    | auto_increment |
+| id       | int          | NO   | PRI | NULL    | auto_increment |
 | username | varchar(50)  | YES  |     | NULL    |                |
 | password | varchar(120) | YES  |     | NULL    |                |
 +----------+--------------+------+-----+---------+----------------+
 3 rows in set (0.00 sec)
 
-mysql> select * from CNDPdata.users;
-Empty set (0.01 sec)
+mysql> select * from LOTRdata.users;
+Empty set (0.00 sec)
+
+mysql> ^DBye
+root@ed4409634c82:/# exit
+rob@Ubuntu20:~/> 
 ```
+<div style="color:darkred">
+
+----
+
+# WIP HERE
+
+----
+
+</div>
 
 ## App
 ### Build and deploy app
@@ -525,7 +566,8 @@ import "fmt"
 
 func main() {
     fmt.Println("Hello, World!")
-}```
+}
+```
 
 ### App
 `main.go`
@@ -649,8 +691,9 @@ func main() {
     <a href="/signup">Sign Up</a>
 </body>
 </html>
-login.html
-
+```
+`login.html`
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -791,6 +834,12 @@ docker inspect frodo
 
 ------------------------------------
 Updates to the tutorial
+
+https://news.ycombinator.com/item?id=11935783
+https://web.archive.org/web/20170706073312/http://dinosaurscode.xyz/posts/
+
+salting
+
 -----
 installing docker
 https://docs.docker.com/engine/install/ubuntu/
