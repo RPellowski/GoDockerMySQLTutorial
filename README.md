@@ -51,7 +51,7 @@ A Linux host is available with the following attributes:
  * MySQL
 
 ## Caveats
-This tutorial may become stale as package location, distribution, management and UI commands change for Ubuntu, Docker, Go and other components.
+This tutorial may become stale as package location, distribution, management and UI commands change for Linux, Docker, Go and other components.
 
 Additional security measures used in a web application are not shown.
 
@@ -107,7 +107,7 @@ For more examples and ideas, visit:
 
 ### Deploy an Alpine container
 
-Run an interactive version of the Alpine container, a small distro of Linux, using the `-i` option and invoking the `/bin/sh` command.  Show the filesystem and running processes.  Exit the container and return to Ubuntu.  No containers are running after this operation.  
+Run an interactive version of the Alpine container, a small Linux distro, using the `-i` option and invoking the `/bin/sh` command.  Show the filesystem and running processes.  Exit the container and return to the Linux host.  No containers are running after this operation.  
 
 **Note:** By not specifying a version, `alpine:latest` is pulled and cached into Docker.  Subsequent references to Alpine will be faster unless the latest version has changed in the public repository, in which case the new version will be downloaded before running.
 
@@ -293,7 +293,7 @@ root@ed4409634c82:/#
 ```
 
 ### Configure MySQL for App
-Add table to LOTRata database.  Perform some SQL operations on the database and the newly created table.
+These operations are performed as the app user, LOTRuser.  Add table to LOTRdata database.  Perform some SQL operations on the newly created table.
 
 ```
 root@ed4409634c82:/# mysql -uLOTRuser -pLOTRpass
@@ -330,6 +330,22 @@ mysql> ^DBye
 root@ed4409634c82:/# exit
 rob@Ubuntu20:~/> 
 ```
+
+## App
+### Build and deploy app
+To build and deploy the app, the following are needed (all source is contained in the code section below):
+ * Dockerfile (used by Docker build command)
+ * Application source code (main.go)
+ * Three files served by the app (index.html, signup.html and login.html)
+ * An open port on the Linux host (8082 is selected here)
+
+The build components of a container are specified in the Dockerfile.  The base container is Golang.  A Golang MySQL support library is downloaded from GitHub (which Docker will cache locally).  App source file and .html files are copied into the container at the desired locations.  The executable is built using `go install`.  Since the source code specifies port 8080, that port is exposed outwards from the container.  Finally, the app binary is specified as the container's entrypoint.
+
+The typical Go workspace is outlined in the following visual:  https://talks.golang.org/2014/organizeio.slide#11
+
+Build is invoked with a single line.  The container is tagged with `-t hobbit`.  By leaving out a version from the `-t` parameter, it is actually tagged with `hobbit:latest`.
+
+Deploy (run) is invoked with a single line.  A copy of the container (`hobbit`) is run as `--detached`, meaning not interactively.  The Ubuntu port that is to be used will be 8082 and mapped to the container's port 8080. The deployed container is named with `--name frodo`.  Any number of `hobbit` containers could be deployed independently by giving them different names.  In addition, the legacy parameter `--link` is used to make the `frodo` container aware of the `mysql` container. 
 <div style="color:darkred">
 
 ----
@@ -339,24 +355,6 @@ rob@Ubuntu20:~/>
 ----
 
 </div>
-
-## App
-### Build and deploy app
-To build and deploy the app, the following are needed (all source is contained in the code section below):
- * Dockerfile (used by Docker build command)
- * main.go (application source code)
- * three .html files served by the app (index, signup and login)
- * an open port on the Ubuntu host (8082 is selected here)
-
-The build components of a container are specified in the Dockerfile.  The base container is Golang.  A Golang MySQL support library is downloaded from GitHub (which Docker will cache locally).  App source file and .html files are copied into the container at the desired locations.  The executable is built using `go install`.  Since the source code specifies port 8080, that port is exposed outwards from the container.  Finally, the app binary is specified as the container's entrypoint.
-
-Build is invoked with a single line.  The container is tagged with `-t hobbit`.  By leaving out a version from the `-t` parameter, it is actually tagged with `hobbit:latest`.
-
-Deploy (run) is invoked with a single line.  A copy of the container (`hobbit`) is run as `--detached`, meaning not interactively.  The Ubuntu port that is to be used will be 8082 and mapped to the container's port 8080. The deployed container is named with `--name frodo`.  Any number of `hobbit` containers could be deployed independently by giving them different names.  In addition, the legacy parameter `--link` is used to make the `frodo` container aware of the `mysql` container. 
-
-The typical Go workspace is outlined in the following visual: https://talks.golang.org/2014/organizeio.slide#11
-
-**Note:** The following `docker build` command may send a large amount build context to Docker daemon, which might be dependent on the docker images you have on your system.  For example, on one test instance, 61.43 GB of build context was sent to the Docker daemon before the `hobbit` build was complete.
 
 <!--
 
@@ -442,7 +440,7 @@ MYSQL_ENV_MYSQL_VERSION=5.7.17-1debian8
 HOME=/root
 ```
 
-### Test app
+### Test the application
 The application has been deployed.
 
 Enter the Ubuntu host's address and the exposed application port in a browser to access the homepage.
@@ -557,8 +555,7 @@ https://coreos.com/quay-enterprise/docs/latest/mysql-container.html
 
 ## Code Snippets
 ### Golang
-**Hello World**
-`hello.go`
+**Hello World** (`hello.go`)
 ```go
 package main
 
@@ -569,8 +566,7 @@ func main() {
 }
 ```
 
-### App
-`main.go`
+**App** (`main.go`)
 ```go
 // reference: https://dinosaurscode.xyz/go/2016/06/19/golang-mysql-authentication/
 package main
@@ -836,7 +832,7 @@ docker inspect frodo
 Updates to the tutorial
 
 https://news.ycombinator.com/item?id=11935783
-https://web.archive.org/web/20170706073312/http://dinosaurscode.xyz/posts/
+https://web.archive.org/web/20170711063402/http://dinosaurscode.xyz/go/2016/06/19/golang-mysql-authentication/
 
 salting
 
@@ -874,4 +870,9 @@ print("hello world!")
 
 </p>
 </details>
+
+Cleanup
+- check all prompts
+- change Ubuntu to Linux
+- 
 -->
