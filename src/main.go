@@ -81,7 +81,7 @@ func main() {
     dbPass := os.Getenv("MYSQL_ENV_MYSQL_ROOT_PASSWORD")
     dbURL := os.Getenv("MYSQL_PORT")
     re := regexp.MustCompile("tcp://(.*)")
-    access := fmt.Sprintf("%s:%s@%s/CNDPdata", dbUser, dbPass, re.ReplaceAllString(dbURL,"tcp($1)$2"))
+    access := fmt.Sprintf("%s:%s@%s/LOTRdata", dbUser, dbPass, re.ReplaceAllString(dbURL,"tcp($1)$2"))
 
     db, err = sql.Open("mysql", access)
     if err != nil {
