@@ -5,7 +5,7 @@ set -e
 MYSQL_USER="LOTRuser"
 MYSQL_DATABASE="LOTRdata"
 MYSQL_CONTAINER_NAME="mysqlshire"
-LOCAL_DB_DIR=/home/rob/mydb/mysql-datadir
+LOCAL_DB_DIR=~/mydb/mysql-datadir
 HOST_PORT=13306
 
 # for better passwords, use
@@ -31,5 +31,5 @@ docker \
 echo "Database '${MYSQL_DATABASE}' running."
 echo "  Username: ${MYSQL_USER}"
 echo "  Password: ${MYSQL_PASSWORD}"
-echo "port ${HOST_PORT}"
-echo "persisting to local directory ${LOCAL_DB_DIR}"
+echo "Port ${HOST_PORT}"
+echo "Persisting to local directory ${LOCAL_DB_DIR}"
