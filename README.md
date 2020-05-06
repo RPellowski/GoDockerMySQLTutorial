@@ -52,12 +52,12 @@ A Linux host is available with the following attributes:
 ## Caveats
 This tutorial may become stale as package location, distribution, management and UI commands change for Linux, Docker, Go and other components.
 
-Simple password hashing is used.  Additional security measures used in a web application are not shown.
+Simple password hashing is used when saving in the database.  Additional security measures used in a web application are not shown.
 
 # Workflow
 ## Docker
 ### Install Docker
-There are a number of methods that can be used to install Docker.  One way is to install a `gitlab ci-runner`, which makes use of a single-line script for Docker installation.  Another method is to follow instructions from Docker.  Either way is relatively painless.  See the links below for downloads.
+There are a number of methods that can be used to install Docker.  One way is to follow instructions from Docker.  Another method is to install a `gitlab ci-runner`, which makes use of a single-line script for Docker installation.  Either way is relatively painless.  See the links below for downloads.
 
 **Note:** When using Docker as non-root, add to the group permissions.
 ```bash
@@ -128,23 +128,20 @@ rob@ubuntu:src> docker ps
 CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
 ```
 **Note:** The `docker ps` command shows no containers running.
-<div style="color:darkred">
-
-----
-
-# WIP HERE
-
-----
-
-</div>
-
 ### Deploy a test MySQL container
-Run a detatched version of the MySQL container (`mysql:latest`). Create the root password (`pass`), set the volume persistence to a local directory `foo`, name it `shire`.
+Run a detached version of the MySQL container (`mysql:latest`). Create the root password (`pass`), set the volume persistence to a local directory `foo`, name it `shire`.
 
 ```bash
-rob@ubuntu:src\> docker run --detach --env MYSQL_ROOT_PASSWORD=pass --volume $PWD/foo:/var/lib/mysql --publish 3306:3306 --name shire mysql
-478e37ed4bd74aae8a66ca5a1bde73b07e45ba212207c7bab8f23195e428c1e1
+rob@ubuntu:src> docker run --detach --env MYSQL_ROOT_PASSWORD=pass --name shire mysql
+025a6714528268d5bdbc13524d285c21c3f44304aee284a4f4d1bf8ad2a6e2a4
 ```
+This time a container is still running after the command returns.
+```bash
+rob@ubuntu:src> docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                 NAMES
+025a67145282        mysql               "docker-entrypoint.s…"   45 minutes ago      Up 45 minutes       3306/tcp, 33060/tcp   shire
+```
+
 ### Test MySQL instance
 To test, there are two ways to attach to the newly created MySQL instance:
  * Connect directly to the container and run the MySQL CLI inside (the method used here)
@@ -152,14 +149,10 @@ To test, there are two ways to attach to the newly created MySQL instance:
 
 Use a Docker command to attach to the newly created MySQL instance in the container, run the MySQL CLI and perform some SQL commands.  For this container, the shell is `/bin/bash`.  
 
-First run as the privileged root user.
-
-# Continue here
-
-
+Run as the privileged root user.
 ```
-rob@ubuntu:src\> docker exec -it shire bash
-root@478e37ed4bd7:/# mysql -uroot -ppass
+rob@ubuntu:src> docker exec -it shire bash
+root@025a67145282:/# mysql -uroot -ppass
 mysql: [Warning] Using a password on the command line interface can be insecure.
 Welcome to the MySQL monitor.  Commands end with ; or \g.
 Your MySQL connection id is 8
@@ -177,13 +170,12 @@ mysql> show databases;
 +--------------------+
 | Database           |
 +--------------------+
-| LOTRdata           |
 | information_schema |
 | mysql              |
 | performance_schema |
 | sys                |
 +--------------------+
-5 rows in set (0.00 sec)
+4 rows in set (0.02 sec)
 
 mysql> show tables from mysql;
 +---------------------------+
@@ -212,27 +204,28 @@ mysql> select host, user, account_locked from mysql.user;
 +-----------+------------------+----------------+
 | host      | user             | account_locked |
 +-----------+------------------+----------------+
-| %         | LOTRuser         | N              |
 | %         | root             | N              |
 | localhost | mysql.infoschema | Y              |
 | localhost | mysql.session    | Y              |
 | localhost | mysql.sys        | Y              |
 | localhost | root             | N              |
 +-----------+------------------+----------------+
-6 rows in set (0.01 sec)
-
-mysql> show tables from LOTRdata;
-Empty set (0.01 sec)
-mysql> ^DBye
-root@ed4409634c82:/#
+5 rows in set (0.01 sec)
 ```
-
-### Configure MySQL for App
-These operations are performed as the app user, LOTRuser.  Add table to LOTRdata database.  Perform some SQL operations on the newly created table.
+### Understand how MySQL for App is configured
+Create `LOTRdata` database.  Add `users` table to LOTRdata database.  Perform some SQL operations on the newly created table.
 
 ```
-root@ed4409634c82:/# mysql -uLOTRuser -pLOTRpass
-...
+mysql> CREATE DATABASE IF NOT EXISTS LOTRdata;
+Query OK, 1 row affected (0.01 sec)
+
+mysql> CREATE TABLE IF NOT EXISTS LOTRdata.users(
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50),
+    password VARCHAR(120)
+);
+Query OK, 0 rows affected (0.03 sec)
+
 mysql> show tables from LOTRdata;
 +--------------------+
 | Tables_in_LOTRdata |
@@ -255,8 +248,8 @@ mysql> select * from LOTRdata.users;
 Empty set (0.00 sec)
 
 mysql> ^DBye
-root@ed4409634c82:/# exit
-rob@ubuntu:src> 
+root@025a67145282:/# exit
+rob@ubuntu:src>
 ```
 ### Understanding environment variables
 To show the effect of the legacy `--link` parameter, two Docker commands are shown here, one without a `--link` parameter and one with the `--link` parameter.  Use of these environment variables for database access can be seen later in the Golang application.  Naming convention by Docker is to prefix the link's exposed communication and environment variables with the uppercase name (in this case, `MYSQL_` and `MYSQL_ENV_`).
@@ -274,7 +267,7 @@ HOME=/root
 ```
 With the `--link` parameter, Alpine receives more environment context.
 ```
-rob@ubuntu:src> docker run --rm --name dummy --link mysqlshire:mysql alpine env
+rob@ubuntu:src> docker run --rm --name dummy --link shire:mysql alpine env
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 HOSTNAME=26c3f9254473
 MYSQL_PORT=tcp://172.17.0.2:3306
@@ -295,6 +288,18 @@ MYSQL_ENV_GOSU_VERSION=1.12
 MYSQL_ENV_MYSQL_MAJOR=8.0
 MYSQL_ENV_MYSQL_VERSION=8.0.20-1debian10
 HOME=/root
+```
+**Note:** The application will make use of the following environment variables when accessing the MySQL database:
+ * `MYSQL_ENV_MYSQL_ROOT_PASSWORD`
+ * `MYSQL_PORT`
+ * `MYSQL_DATABASE`
+
+### Remove the test MySQL container
+```bash
+rob@ubuntu:src> docker kill shire
+shire
+rob@ubuntu:src> docker rm shire
+shire
 ```
 ### Deploy a test Golang container
 Run an interactive version of the Golang container (`golang:latest`).  Compile and run a simple Golang application.  Use the `-v` option to map a Linux directory (`~/hello`) to a container directory (`/go/src`).  For this container, the shell is `/bin/bash`.  
@@ -340,10 +345,15 @@ exit
 rob@ubuntu:hello> ./hello
 Hello, World!
 ```
+<div style="color:darkred">
 
----
----
----
+----
+
+# WIP HERE
+
+----
+
+</div>
 
 ## MySQL
 
