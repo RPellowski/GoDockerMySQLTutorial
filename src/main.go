@@ -87,7 +87,7 @@ func homePage(res http.ResponseWriter, req *http.Request) {
 func main() {
 	fmt.Println("start application")
 	dbUser := "root"
-	dbPass := os.Getenv("MYSQL_ENV_MYSQL_ROOT_PASSWORD")
+	dbPass := os.Getenv("MYSQL_ENV_MYSQL_PASSWORD")
 	dbURL := os.Getenv("MYSQL_PORT")
 	dbDBName := os.Getenv("MYSQL_DATABASE")
 	re := regexp.MustCompile("tcp://(.*)")

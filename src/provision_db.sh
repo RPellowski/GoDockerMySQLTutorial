@@ -4,7 +4,7 @@ set -e
 
 MYSQL_USER="LOTRuser"
 MYSQL_DATABASE="LOTRdata"
-MYSQL_CONTAINER_NAME="mysqlshire"
+MYSQL_CONTAINER_NAME="shire"
 LOCAL_DB_DIR=~/mydb/mysql-datadir
 HOST_PORT=13306
 
@@ -16,6 +16,8 @@ MYSQL_PASSWORD=$(echo LOTRpass)
 mkdir -p ${LOCAL_DB_DIR}
 echo "Starting the MySQL container as '${MYSQL_CONTAINER_NAME}'"
 
+docker build -t shire -f Dockerfile.db .
+
 docker \
   run \
   --detach \
@@ -26,7 +28,7 @@ docker \
   --name ${MYSQL_CONTAINER_NAME} \
   --volume ${LOCAL_DB_DIR}:/var/lib/mysql \
   --publish ${HOST_PORT}:3306 \
-  mysql;
+  shire;
 
 echo "Database '${MYSQL_DATABASE}' running."
 echo "  Username: ${MYSQL_USER}"
