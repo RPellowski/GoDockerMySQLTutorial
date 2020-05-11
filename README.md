@@ -441,8 +441,17 @@ CONTAINER ID        IMAGE               COMMAND                  CREATED        
 7ac8b4a3ee12        hobbit              "/bin/sh -c /go/bin/m"   41 seconds ago      Up 40 seconds       0.0.0.0:8082->8080/tcp   frodo
 c8248de299a6        mysql               "docker-entrypoint.sh"   14 hours ago        Up 14 hours         0.0.0.0:3306->3306/tcp   mysqlshire
 ```
-
-
+**Note:** If builds fail with the following
+```bash
+# cd .; git clone -- https://github.com/go-sql-driver/mysql /go/src/github.com/go-sql-driver/mysql
+Cloning into '/go/src/github.com/go-sql-driver/mysql'...
+fatal: unable to access 'https://github.com/go-sql-driver/mysql/': Could not resolve host: github.com
+package github.com/go-sql-driver/mysql: exit status 128
+```
+Change the `docker build` command to include the host as network:
+```bash
+docker build -t hobbit --network=host .
+```
 ### Test the application
 The application has been deployed.
 
