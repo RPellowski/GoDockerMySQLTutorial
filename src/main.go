@@ -8,7 +8,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
-//	"regexp"
 )
 
 var db *sql.DB
@@ -87,13 +86,10 @@ func homePage(res http.ResponseWriter, req *http.Request) {
 func main() {
 	fmt.Println("start application")
 	dbUser := os.Getenv("MYSQL_USER")
-//"root"
 	dbPass := os.Getenv("MYSQL_PASSWORD")
 	dbDBName := os.Getenv("MYSQL_DATABASE")
 	dbContainerName := os.Getenv("MYSQL_CONTAINER_NAME")
 	dbPort := os.Getenv("MYSQL_PORT")
-//	re := regexp.MustCompile("tcp://(.*)")
-	//access := fmt.Sprintf("%s:%s@%s/%s", dbUser, dbPass, re.ReplaceAllString(dbURL, "tcp($1)$2"), dbDBName)
 	access := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", dbUser, dbPass, dbContainerName, dbPort, dbDBName)
 	fmt.Println(access)
 	db, err = sql.Open("mysql", access)

@@ -52,14 +52,14 @@ A Linux host is available with the following attributes:
 ## Caveats
 This tutorial may become stale as package location, distribution, management and UI commands change for Linux, Docker, Go and other components.
 
-Simple password hashing is used when saving in the database.  Additional security measures used in a web application are not shown.
+Password hashing is used when saving in the database.  Additional security measures used in a web application are not shown.
 
 # Workflow
 ## Docker
 ### Install Docker
 There are a number of methods that can be used to install Docker.  One way is to follow instructions from Docker.  Another method is to install a `gitlab ci-runner`, which makes use of a single-line script for Docker installation.  Either way is relatively painless.  See the links below for downloads.
 
-**Note:** When using Docker as non-root, add to the group permissions.
+**Note:** When using Docker as non-root, add Docker group permissions.
 ```bash
 rob@ubuntu:src> groups rob
 rob : rob adm cdrom sudo dip plugdev lpadmin lxd sambashare
@@ -106,7 +106,7 @@ For more examples and ideas, visit:
 
 ### Deploy a test Alpine container
 
-Run an interactive version of the Alpine container, a small Linux distro, using the `-i` option and invoking the `/bin/sh` command.  Show the filesystem and running processes.  Exit the container and return to the Linux host.  No containers are running after this operation.  
+Run an interactive version of the Alpine container, a small Linux distro, using the `-i` option and invoking the `/bin/sh` command.  Show the filesystem and running processes.  Exit the container and return to the Linux host.  No containers are left running after this operation is complete.  
 
 **Note:** By not specifying a version, `alpine:latest` is pulled and cached into Docker.  Subsequent references to Alpine will be faster unless the latest version has changed in the public repository, in which case the new version will be downloaded before running.
 
@@ -252,47 +252,41 @@ root@025a67145282:/# exit
 rob@ubuntu:src>
 ```
 ### Understanding environment variables
-To show the effect of the legacy `--link` parameter, two Docker commands are shown here, one without a `--link` parameter and one with the `--link` parameter.  Use of these environment variables for database access can be seen later in the Golang application.  Naming convention by Docker is to prefix the link's exposed communication and environment variables with the uppercase name (in this case, `MYSQL_` and `MYSQL_ENV_`).
+To show the effect of the `--env-file` parameter, two Docker commands are shown here, one without a `--env-file` parameter and one with the `--env-file` parameter.  Use of these environment variables for database access can be seen later in the Golang application.
 
-Docker Compose is recommended over manually linking containers.  However, use of Compose is not needed for this tutorial.
+Docker Compose can help manage environment variables for multiple containers.  However, use of Compose is not needed for this tutorial.  Instead, bash scripts manage environment variables.
 
 **Note:** Even though Linux localhost access to the `mysqlshire` instance is through port `13306`, an application will access it directly using the environment (tcp) address and port because Docker manages the mapping.
 
-Without the `--link` parameter, Alpine has a minimal environment.
+Without the `--env-file` parameter, Alpine has a minimal environment.
 ```
-rob@ubuntu:src> docker run --rm --name dummy alpine env
+rob@ubuntu:src> docker run --rm alpine env
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-HOSTNAME=f382b4a6024b
+HOSTNAME=96d2b4d69edb
 HOME=/root
 ```
-With the `--link` parameter, Alpine receives more environment context.
+With the `--env-file` parameter, Alpine receives more environment context.
 ```
-rob@ubuntu:src> docker run --rm --name dummy --link shire:mysql alpine env
+rob@ubuntu:src> docker run --rm --env-file my-env alpine env
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-HOSTNAME=26c3f9254473
-MYSQL_PORT=tcp://172.17.0.2:3306
-MYSQL_PORT_3306_TCP=tcp://172.17.0.2:3306
-MYSQL_PORT_3306_TCP_ADDR=172.17.0.2
-MYSQL_PORT_3306_TCP_PORT=3306
-MYSQL_PORT_3306_TCP_PROTO=tcp
-MYSQL_PORT_33060_TCP=tcp://172.17.0.2:33060
-MYSQL_PORT_33060_TCP_ADDR=172.17.0.2
-MYSQL_PORT_33060_TCP_PORT=33060
-MYSQL_PORT_33060_TCP_PROTO=tcp
-MYSQL_NAME=/dummy/mysql
-MYSQL_ENV_MYSQL_ROOT_PASSWORD=LOTRrootpass
-MYSQL_ENV_MYSQL_USER=LOTRuser
-MYSQL_ENV_MYSQL_PASSWORD=LOTRpass
-MYSQL_ENV_MYSQL_DATABASE=LOTRdata
-MYSQL_ENV_GOSU_VERSION=1.12
-MYSQL_ENV_MYSQL_MAJOR=8.0
-MYSQL_ENV_MYSQL_VERSION=8.0.20-1debian10
+HOSTNAME=86ea48ab7820
+MYSQL_USER=LOTRuser
+MYSQL_DATABASE=LOTRdata
+MYSQL_CONTAINER_NAME=brandywine
+MYSQL_PORT=3306
+MYSQL_HOST_PORT=13306
+MYSQL_ROOT_PASSWORD=LOTRrootpass
+MYSQL_PASSWORD=LOTRpass
+LOCAL_DB_DIR=~/my-db/data
+APP_NETWORK=my-net
 HOME=/root
 ```
 **Note:** The application will make use of the following environment variables when accessing the MySQL database:
- * `MYSQL_ENV_MYSQL_ROOT_PASSWORD`
- * `MYSQL_PORT`
+ * `MYSQL_USER`
+ * `MYSQL_PASSWORD`
  * `MYSQL_DATABASE`
+ * `MYSQL_CONTAINER_NAME`
+ * `MYSQL_PORT`
 
 ### Remove the test MySQL container
 ```bash
@@ -345,6 +339,12 @@ exit
 rob@ubuntu:hello> ./hello
 Hello, World!
 ```
+## MySQL
+
+### Deploy the real MySQL instance
+MySQL container (`mysql:latest`) is deployed with a script (`provision_db.sh`).  The script can be improved by replacing hard-coded items to make use of environment variables and improve security.  
+
+For this instance, port `13306` is selected to avoid collisions in the case that MySQL is already deployed on the Linux host (at default port `3306`).  Docker networking ensures that the container still sees incoming interactions at port `3306.`
 <div style="color:darkred">
 
 ----
@@ -355,17 +355,13 @@ Hello, World!
 
 </div>
 
-## MySQL
-
-### Deploy the real MySQL instance
-MySQL container (`mysql:latest`) is deployed with a script (`provision_db.sh`).  The script can be improved by replacing hard-coded items to make use of environment variables and improve security.  
-
-For this instance, port `13306` is selected to avoid collisions in the case that MySQL is already deployed on the Linux host (at default port `3306`).  Docker networking ensures that the container still sees incoming interactions at port `3306.`
 
 ```
-rob@ubuntu:src> ./provision_db.sh
-Starting the MySQL container as 'mysqlshire'
-Unable to find image 'mysql:latest' locally
+rob@ubuntu:src> ./provision_db.sh 
+3e7ec4f751693df37b77a3a4e148c6695dda63aa7e7038def9b4b783bce5db4c
+Starting the MySQL container as 'brandywine'
+Sending build context to Docker daemon  12.25MB
+Step 1/2 : FROM mysql
 latest: Pulling from library/mysql
 54fec2fa59d0: Downloading [================>      ]  24.25MB/27.1MB
 bcc6c6145912: Download complete 
@@ -378,15 +374,20 @@ c4a3851d9207: Waiting
 bca5ce71f9ea: Pull complete 
 Digest: sha256:61a2a33f4b8b4bc93b7b6b9e65e64044aaec594809f818aeffbff69a893d1944
 Status: Downloaded newer image for mysql:latest
-f49fdd43ddc2692372b01e5bd046561f975b3b07bb7cd69c1bbfd79159cb2316
+ ---> a7a67c95e831
+Step 2/2 : COPY ./setup.sql /docker-entrypoint-initdb.d/
+ ---> f033f4cf8735
+Successfully built f033f4cf8735
+Successfully tagged shire:latest
+e3cb5cd23d31650ade90a28b846140fb7fa77d6b35eb6feb660b9de479a3ac36
 Database 'LOTRdata' running.
   Username: LOTRuser
   Password: LOTRpass
-port 13306
-persisting to local directory /home/rob/mydb/mysql-datadir
+Port 3306
+Persisting to local directory /home/rob/my-db/data
 rob@ubuntu:src> docker ps
 CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                NAMES
-f49fdd43ddc2        mysql               "docker-entrypoint.s…"   2 minutes ago       Up 2 minutes        33060/tcp, 0.0.0.0:13306->3306/tcp   mysqlshire
+e3cb5cd23d31        shire               "docker-entrypoint.s…"   45 seconds ago      Up 42 seconds       33060/tcp, 0.0.0.0:13306->3306/tcp   brandywine
 ```
 
 ## App
@@ -397,49 +398,52 @@ To build and deploy the app, the following are needed (all source is available):
  * Three files served by the app (index.html, signup.html and login.html)
  * An open port on the Linux host (8082 is selected here)
 
-The build components of a container are specified in the Dockerfile.  The base container is Golang.  A Golang MySQL support library is downloaded from GitHub (which Docker will cache locally).  App source file and .html files are copied into the container at the desired locations.  The executable is built using `go install`.  Since the source code specifies port `8080`, that port is exposed outwards from the container.  Finally, the app binary is specified as the container's entrypoint.
+The build components of a container are specified in the Dockerfile.  The base container is Golang.  Golang MySQL support libraries are downloaded from GitHub and Golang (which Docker will cache locally).  App source file and .html files are copied into the container at the desired locations.  The executable is built using `go install`.  Since the source code specifies port `8080`, that port is exposed outwards from the container.  Finally, the app binary is specified as the container's entrypoint.
 
 The typical Go workspace is outlined in the following visual: https://talks.golang.org/2014/organizeio.slide#11
 
-**Build** is invoked with a single line.  The container is tagged with `-t hobbit`.  By leaving out a version from the `-t` parameter, the result is the tag  `hobbit:latest`.
+**Build** is invoked with a command.  The container is tagged with `-t hobbit`.  By leaving out a version from the `-t` parameter, the result is the tag  `hobbit:latest`.
 
-**Deploy** is invoked with a single line.  A copy of the container (`hobbit`) is run as `--detached`, meaning not interactively.  The Linux host port that is to be used will be `8082` and mapped to the container's port `8080`. The deployed container is named with `--name frodo`.  Any number of `hobbit` containers could be deployed independently by giving them different names.  In addition, the legacy parameter `--link` is used to make the `frodo` container aware of the `mysql` container. 
+**Deploy** is invoked with a command.  A copy of the container (`hobbit`) is run as `--detached`, meaning not interactively.  The Linux host port that is to be used will be `8082` and mapped to the container's port `8080`. The deployed container is named with `--name frodo`.  Any number of `hobbit` containers could be deployed independently by giving them different names.  In addition, the  parameter `--env-file` is used to make the `frodo` container aware of the `mysql` container. 
 
 ```bash
-rob@ubuntu:src> docker build -t hobbit .
-Sending build context to Docker daemon  11.78kB
-Step 1/7 : FROM golang
+rob@ubuntu:src> docker build -t hobbit --network host .
+Sending build context to Docker daemon  12.25MB
+Step 1/8 : FROM golang
  ---> 2421885b04da
-Step 2/7 : RUN go get github.com/go-sql-driver/mysql
- ---> Running in 5fc38c4a8f59
-Removing intermediate container 5fc38c4a8f59
- ---> ceca9a69dd75
-Step 3/7 : COPY main.go /go/src/myapp/
- ---> 3890ad46694a
-Step 4/7 : COPY *.html ./
- ---> d847f8118d02
-Step 5/7 : RUN go install myapp/
- ---> Running in 2505c7b7b1bd
-Removing intermediate container 2505c7b7b1bd
- ---> 911af53d9cfb
-Step 6/7 : EXPOSE 8080
- ---> Running in bd078437902b
-Removing intermediate container bd078437902b
- ---> 429bfea1aded
-Step 7/7 : ENTRYPOINT /go/bin/myapp
- ---> Running in 360270a4791e
-Removing intermediate container 360270a4791e
- ---> 23cbc59306c1
-Successfully built 23cbc59306c1
+Step 2/8 : RUN go get github.com/go-sql-driver/mysql
+ ---> Running in ad85accbb697
+Removing intermediate container ad85accbb697
+ ---> 7258f2b61454
+Step 3/8 : RUN go get golang.org/x/crypto/bcrypt
+ ---> Running in 14a3269a4ec1
+Removing intermediate container 14a3269a4ec1
+ ---> b3eb7a3f0c74
+Step 4/8 : COPY main.go /go/src/myapp/
+ ---> 7abca0a8a846
+Step 5/8 : COPY *.html ./
+ ---> 32bd080bbbb4
+Step 6/8 : RUN go install myapp/
+ ---> Running in dc1e18efd66a
+Removing intermediate container dc1e18efd66a
+ ---> a0c6b8c82432
+Step 7/8 : EXPOSE 8080
+ ---> Running in 3a8d5eea2afe
+Removing intermediate container 3a8d5eea2afe
+ ---> 5e9252aa0c82
+Step 8/8 : ENTRYPOINT /go/bin/myapp
+ ---> Running in ff0664531fc8
+Removing intermediate container ff0664531fc8
+ ---> 5a34872ea8f8
+Successfully built 5a34872ea8f8
 Successfully tagged hobbit:latest
 
-rob@ubuntu:src> docker run --detach --publish 8082:8080 --name frodo --link mysqlshire:mysql hobbit
-7ac8b4a3ee123157cc541a99496d1c3756834c428151cb56ef02b54ac547433f
-
+rob@ubuntu:src> docker run --detach --publish 8082:8080 --name frodo --env-file my-env --network my-net hobbit
+8a3320d9441c536d87475fe91e475ab02522aa0e023aec799bd0a37c868ed5d6
 rob@ubuntu:src> docker ps
-CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES
-7ac8b4a3ee12        hobbit              "/bin/sh -c /go/bin/m"   41 seconds ago      Up 40 seconds       0.0.0.0:8082->8080/tcp   frodo
-c8248de299a6        mysql               "docker-entrypoint.sh"   14 hours ago        Up 14 hours         0.0.0.0:3306->3306/tcp   mysqlshire
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                NAMES
+8a3320d9441c        hobbit              "/bin/sh -c /go/bin/…"   7 seconds ago       Up 5 seconds        0.0.0.0:8082->8080/tcp               frodo
+e3cb5cd23d31        shire               "docker-entrypoint.s…"   13 minutes ago      Up 13 minutes       33060/tcp, 0.0.0.0:13306->3306/tcp   brandywine
 ```
 **Note:** If builds fail with the following
 ```bash
@@ -450,7 +454,7 @@ package github.com/go-sql-driver/mysql: exit status 128
 ```
 Change the `docker build` command to include the host as network:
 ```bash
-docker build -t hobbit --network=host .
+docker build -t hobbit --network host .
 ```
 ### Test the application
 The application has been deployed.
@@ -459,23 +463,24 @@ Enter the Linux host's address and the exposed application port in a browser to 
 
 Click on the SignUp link to get the the SignUp Page.  Enter a new username and password.  
 
-For demo purposes, the `username/password` was entered as `Bilbo/Baggins`.  Now examine the `mysql` contents.  Again, if the default port 3306 is used, -P can be omitted.
+For demo purposes, the `username/password` was entered as `Bilbo/Baggins`.  Now examine the `mysql` contents.
 
 **Note:** Access is via the `LOTRuser` rather than `root`.
 
 ```
-rob@ubuntu:src> docker exec -it mysqlshire /bin/bash
-root@83e3291e1f4d:/# mysql -uLOTRuser -pLOTRpass
+rob@ubuntu:src> docker exec -it brandywine bash
+root@e3cb5cd23d31:/# mysql -uLOTRuser -pLOTRpass
 ...
 mysql> select * from LOTRdata.users;
-+----+----------+----------+
-| id | username | password |
-+----+----------+----------+
-|  1 | Bilbo    | Baggins  |
-+----+----------+----------+
++----+----------+--------------------------------------------------------------+
+| id | username | password                                                     |
++----+----------+--------------------------------------------------------------+
+|  1 | Bilbo    | $2a$10$j/XXH9zMOTdXeeVvuSGAWejerXDiwKWHEXZxg6JjjtPU/e/iZZmPO |
++----+----------+--------------------------------------------------------------+
 1 row in set (0.00 sec)
 
-mysql>
+mysql> ^DBye
+root@e3cb5cd23d31:/# exit
 ```
 Test the login page using the same `username/password`.
 
