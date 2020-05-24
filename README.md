@@ -3,12 +3,6 @@ A tutorial on using three technologies: Go, Docker and MySQL
 
 ---
 
-<div style="color:darkred">
-
-# 🚧 Work In Progress
-
-</div>
-
 Basic instructions to create an application container and a database service container, and deploy them together using Docker.  The application is a Golang web server with a signup page and login page, which read and write persistent data to / from the database.  Docker container deployment is on a local Linux host.  With modification, this application and its service could be enabled to run on a PaaS or IaaS.
 
 Requires general familiarity with Linux but assumes no knowledge of Go, Docker or MySQL.
@@ -345,17 +339,6 @@ Hello, World!
 MySQL container (`mysql:latest`) is deployed with a script (`provision_db.sh`).  The script can be improved by replacing hard-coded items to make use of environment variables and improve security.  
 
 For this instance, port `13306` is selected to avoid collisions in the case that MySQL is already deployed on the Linux host (at default port `3306`).  Docker networking ensures that the container still sees incoming interactions at port `3306.`
-<div style="color:darkred">
-
-----
-
-# WIP HERE
-
-----
-
-</div>
-
-
 ```
 rob@ubuntu:src> ./provision_db.sh 
 3e7ec4f751693df37b77a3a4e148c6695dda63aa7e7038def9b4b783bce5db4c
@@ -379,7 +362,7 @@ Step 2/2 : COPY ./setup.sql /docker-entrypoint-initdb.d/
  ---> f033f4cf8735
 Successfully built f033f4cf8735
 Successfully tagged shire:latest
-e3cb5cd23d31650ade90a28b846140fb7fa77d6b35eb6feb660b9de479a3ac36
+b10a3f9f2a2835fbe8385ae0bb0c9d90df7bd110799e18f64cf947e9461f8bd2
 Database 'LOTRdata' running.
   Username: LOTRuser
   Password: LOTRpass
@@ -387,7 +370,7 @@ Port 3306
 Persisting to local directory /home/rob/my-db/data
 rob@ubuntu:src> docker ps
 CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                NAMES
-e3cb5cd23d31        shire               "docker-entrypoint.s…"   45 seconds ago      Up 42 seconds       33060/tcp, 0.0.0.0:13306->3306/tcp   brandywine
+b10a3f9f2a28        shire               "docker-entrypoint.s…"   45 seconds ago      Up 42 seconds       33060/tcp, 0.0.0.0:13306->3306/tcp   brandywine
 ```
 
 ## App
@@ -404,62 +387,58 @@ The typical Go workspace is outlined in the following visual: https://talks.gol
 
 **Build** is invoked with a command.  The container is tagged with `-t hobbit`.  By leaving out a version from the `-t` parameter, the result is the tag  `hobbit:latest`.
 
-**Deploy** is invoked with a command.  A copy of the container (`hobbit`) is run as `--detached`, meaning not interactively.  The Linux host port that is to be used will be `8082` and mapped to the container's port `8080`. The deployed container is named with `--name frodo`.  Any number of `hobbit` containers could be deployed independently by giving them different names.  In addition, the  parameter `--env-file` is used to make the `frodo` container aware of the `mysql` container. 
+**Deploy** is invoked with a command.  A copy of the container (`hobbit`) is run as `--detached`, meaning not interactively.  The Linux host port that is to be used will be `8082` and mapped to the container's port `8080`. The deployed container is named with `--name frodo`.  Any number of `hobbit` containers could be deployed independently by giving them different names.  In addition, the  parameter `--env-file` is used to make the `frodo` container aware of the `mysql` container.
+
+Both commands are contained in the bash script `create_app.sh`
 
 ```bash
-rob@ubuntu:src> docker build -t hobbit --network host .
-Sending build context to Docker daemon  12.25MB
+rob@ubuntu:src> ./create_app.sh 
+Sending build context to Docker daemon   2.09MB
 Step 1/8 : FROM golang
- ---> 2421885b04da
+ ---> 7e5e8028e8ec
 Step 2/8 : RUN go get github.com/go-sql-driver/mysql
- ---> Running in ad85accbb697
-Removing intermediate container ad85accbb697
- ---> 7258f2b61454
+ ---> Running in d573553871f6
+Removing intermediate container d573553871f6
+ ---> f3342f0b1ca0
 Step 3/8 : RUN go get golang.org/x/crypto/bcrypt
- ---> Running in 14a3269a4ec1
-Removing intermediate container 14a3269a4ec1
- ---> b3eb7a3f0c74
+ ---> Running in 1fdfe5bc2070
+Removing intermediate container 1fdfe5bc2070
+ ---> ce09b9fff213
 Step 4/8 : COPY main.go /go/src/myapp/
- ---> 7abca0a8a846
+ ---> 00c5a1420a03
 Step 5/8 : COPY *.html ./
- ---> 32bd080bbbb4
+ ---> d48c9c3f8528
 Step 6/8 : RUN go install myapp/
- ---> Running in dc1e18efd66a
-Removing intermediate container dc1e18efd66a
- ---> a0c6b8c82432
+ ---> Running in daab0400e0d8
+Removing intermediate container daab0400e0d8
+ ---> 6b052364a6cf
 Step 7/8 : EXPOSE 8080
- ---> Running in 3a8d5eea2afe
-Removing intermediate container 3a8d5eea2afe
- ---> 5e9252aa0c82
+ ---> Running in a0709c2d14bb
+Removing intermediate container a0709c2d14bb
+ ---> 086be3fe4869
 Step 8/8 : ENTRYPOINT /go/bin/myapp
- ---> Running in ff0664531fc8
-Removing intermediate container ff0664531fc8
- ---> 5a34872ea8f8
-Successfully built 5a34872ea8f8
+ ---> Running in 3fefa09f9724
+Removing intermediate container 3fefa09f9724
+ ---> eb448723420a
+Successfully built eb448723420a
 Successfully tagged hobbit:latest
-
-rob@ubuntu:src> docker run --detach --publish 8082:8080 --name frodo --env-file my-env --network my-net hobbit
-8a3320d9441c536d87475fe91e475ab02522aa0e023aec799bd0a37c868ed5d6
+2eb211f6ef410788030b863d6cbbecbf467dc9240852dc9183c93177fa1c7cd5
 rob@ubuntu:src> docker ps
-CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                NAMES
-8a3320d9441c        hobbit              "/bin/sh -c /go/bin/…"   7 seconds ago       Up 5 seconds        0.0.0.0:8082->8080/tcp               frodo
-e3cb5cd23d31        shire               "docker-entrypoint.s…"   13 minutes ago      Up 13 minutes       33060/tcp, 0.0.0.0:13306->3306/tcp   brandywine
+CONTAINER ID        IMAGE               COMMAND                  CREATED              STATUS              PORTS                                NAMES
+2eb211f6ef41        hobbit              "/bin/sh -c /go/bin/…"   40 seconds ago       Up 37 seconds       0.0.0.0:8082->8080/tcp               frodo
+b10a3f9f2a28        shire               "docker-entrypoint.s…"   About a minute ago   Up About a minute   33060/tcp, 0.0.0.0:13306->3306/tcp   brandywine
 ```
-**Note:** If builds fail with the following
+**Note:** The parameter `--network host` is needed when builds fail due to containers not having access to internet.
 ```bash
 # cd .; git clone -- https://github.com/go-sql-driver/mysql /go/src/github.com/go-sql-driver/mysql
 Cloning into '/go/src/github.com/go-sql-driver/mysql'...
 fatal: unable to access 'https://github.com/go-sql-driver/mysql/': Could not resolve host: github.com
 package github.com/go-sql-driver/mysql: exit status 128
 ```
-Change the `docker build` command to include the host as network:
-```bash
-docker build -t hobbit --network host .
-```
 ### Test the application
 The application has been deployed.
 
-Enter the Linux host's address and the exposed application port in a browser to access the homepage, `http://127.0.0.1:8082/`.
+Open a browser and enter the Linux host's address and the exposed application port to access the homepage, `http://127.0.0.1:8082/`.
 
 Click on the SignUp link to get the the SignUp Page.  Enter a new username and password.  
 
@@ -469,7 +448,7 @@ For demo purposes, the `username/password` was entered as `Bilbo/Baggins`.  Now
 
 ```
 rob@ubuntu:src> docker exec -it brandywine bash
-root@e3cb5cd23d31:/# mysql -uLOTRuser -pLOTRpass
+root@b10a3f9f2a28:/# mysql -uLOTRuser -pLOTRpass
 ...
 mysql> select * from LOTRdata.users;
 +----+----------+--------------------------------------------------------------+
@@ -480,13 +459,13 @@ mysql> select * from LOTRdata.users;
 1 row in set (0.00 sec)
 
 mysql> ^DBye
-root@e3cb5cd23d31:/# exit
+root@b10a3f9f2a28:/# exit
 ```
 Test the login page using the same `username/password`.
 
 Minimal logging has been enabled in the app.  This can be seen with the `docker logs` command.  The `--follow option` is useful when watching the application in real-time.
 ```
-rob@ubuntu:src> docker logs frodo --follow
+rob@ubuntu:src> docker logs --follow frodo
 start application
 homePage
 homePage
@@ -505,30 +484,45 @@ rob@ubuntu:src> docker inspect frodo
 ...
             "IPAddress": "172.17.0.3",
 ```
+Use `docker network inspect` to find out more about the network we created for the containers.
+```
+rob@ubuntu:src> docker network inspect my-net
+...
+        "Containers": {
+            "2eb211f6ef410788030b863d6cbbecbf467dc9240852dc9183c93177fa1c7cd5": {
+                "Name": "frodo",
+ ...
+                "IPv4Address": "172.29.0.3/16",
+            "b10a3f9f2a2835fbe8385ae0bb0c9d90df7bd110799e18f64cf947e9461f8bd2": {
+                "Name": "brandywine",
+                "IPv4Address": "172.29.0.2/16",
+```
 Stop containers
 ```
 rob@ubuntu:src> docker ps
 CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                NAMES
-94f88f802123        hobbit              "/bin/sh -c /go/bin/…"   17 minutes ago      Up 17 minutes       0.0.0.0:8082->8080/tcp               frodo
-83e3291e1f4d        mysql               "docker-entrypoint.s…"   19 minutes ago      Up 19 minutes       33060/tcp, 0.0.0.0:13306->3306/tcp   mysqlshire
-rob@ubuntu:src> docker stop frodo mysqlshire
-
+2eb211f6ef41        hobbit              "/bin/sh -c /go/bin/…"   8 minutes ago       Up 8 minutes        0.0.0.0:8082->8080/tcp               frodo
+b10a3f9f2a28        shire               "docker-entrypoint.s…"   8 minutes ago       Up 8 minutes        33060/tcp, 0.0.0.0:13306->3306/tcp   brandywine
+rob@ubuntu:src> docker stop frodo brandywine
 frodo
-mysqlshire
+brandywine
 
 rob@ubuntu:src> docker ps
 CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
 ```
 Remove containers
 ```
-rob@ubuntu:src> docker rm frodo mysqlshire
+rob@ubuntu:src> docker rm frodo brandywine
 frodo
-mysqlshire
+brandywine
 rob@ubuntu:src> docker images
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-hobbit              latest              477aab4679ff        19 minutes ago      821MB
-<none>              <none>              f0227f1557f1        20 minutes ago      821MB
-mysql               latest              a7a67c95e831        4 days ago          541MB 
+hobbit              latest              eb448723420a        12 minutes ago      831MB
+shire               latest              0d58d3455ecf        13 minutes ago      541MB
+golang              latest              7e5e8028e8ec        8 days ago          810MB
+mysql               latest              94dff5fab37f        8 days ago          541MB
+alpine              latest              f70734b6a266        4 weeks ago         5.61MB
+hello-world         latest              bf756fb1ae65        4 months ago        13.3kB
 ```
 Remove images
 ```
@@ -544,6 +538,27 @@ Deleted: sha256:7972c7c2b8269f6d954cae13742dea63b6b8b960adacfd2d6c4b3c9dd6f9104b
 ...
 rob@ubuntu:src> docker images
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+```
+A script is provided to cleanup everything at once.
+```
+rob@ubuntu:src> ./cleanup.sh
+Untagged: hobbit:latest
+Deleted: sha256:eb448723420ae4deaf5e274b014ca52ed80693c4d7e60e5d11228e323dbbafef
+Deleted: sha256:086be3fe4869d5b9292b501dd704dc81475c1ff275070591c0a2eff36d8f3980
+Deleted: sha256:6b052364a6cfa42be94b4574fef6e79344c13730ea4228dcecb03c534f52a030
+Deleted: sha256:d724b318b3d753d331ec9097ad96c9ae01e47baf868b0c27e66026f6e584d830
+Deleted: sha256:d48c9c3f852856cfb886094d849be2da6d16f2a0249a5e488d87279eef7f7cbe
+Deleted: sha256:95050e6a2aa4697d67a6ead3bedeaba71ac2dfa418c3cadb680eb77393b0a04d
+Deleted: sha256:00c5a1420a03e07ac5c1f11e46fd1e9ce742565e6d199f17f22930b635f3a0af
+Deleted: sha256:7f0039b6099df87bb4a43c970e61b1a493e3ecf47c910862df7f6f57448d5e15
+Deleted: sha256:ce09b9fff2132c4aa86fa25c4abaa8f36baa440cb3c59b99fa2500e67a5fc0de
+Deleted: sha256:b4c60f58f538945b1a3d929c9a0cb9feba2df18d89d0fc17261e4136f9dd8e6b
+Deleted: sha256:f3342f0b1ca0d1224c76b0cdddebdc60102bd57027770e7f53a94177486a2e70
+Deleted: sha256:d101026c02b98bc953c26e9497fef836bb5c230d373c67904a4ec521e8f5aa35
+Untagged: shire:latest
+Deleted: sha256:0d58d3455ecfa4411ce9450c89b6b8c694825b13c7dd4ada6156891e98c30136
+Deleted: sha256:cacb914c5a87d53d458d90ad7e9b36dd819d33aa6e832c02821b7bf67b5c3116
+my-net
 ```
 
 ## Links

@@ -18,3 +18,10 @@ docker network rm my-net
 # remove database persistent directory
 sudo rm -fr ~/my-db
 
+# remove go library directories
+sudo rm -fr golang.org
+sudo rm -fr github.com
+
+# remove hello directory
+sudo rm -fr hello
+

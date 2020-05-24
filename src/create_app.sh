@@ -1,7 +1,7 @@
 #!/bin/bash
 . my-env
 
-docker build -t hobbit --network host .
+docker build -t hobbit -f Dockerfile.app --network host .
 
 docker run \
     --detach \
